@@ -43,72 +43,68 @@ export default function App() {
   }
   
   useEffect(() => {
-    let reconnectTimeout: number;
-    let isConnecting = false
+  let reconnectTimeout: number | undefined  // ✅ Changed to allow undefined
+  let isConnecting = false
+  
+  const connectWebSocket = () => {
+    if (isConnecting) {
+      console.log('⏳ Connection already in progress...')
+      return
+    }
     
-    const connectWebSocket = () => {
-      if (isConnecting) {
-        console.log('⏳ Connection already in progress...')
-        return
-      }
-      
-      isConnecting = true
-      console.log('🔄 Attempting to connect to backend...')
-      
-      // Use environment variable or fallback to localhost
-      const wsUrl = 'wss://ai-commander-backend.onrender.com/ws/commander' || 'ws://localhost:8000/ws/commander'
-      console.log('🔗 Connecting to:', wsUrl)
-      
-      const ws = new WebSocket(wsUrl)
-      wsRef.current = ws
+    isConnecting = true
+    console.log('🔄 Attempting to connect to backend...')
+    
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/commander'
+    console.log('🔗 Connecting to:', wsUrl)
+    
+    const ws = new WebSocket(wsUrl)
+    wsRef.current = ws
 
-      ws.onopen = () => {
-        console.log('✅ Connected to AI Commander Backend')
-        setConnected(true)
-        isConnecting = false
-      }
+    ws.onopen = () => {
+      console.log('✅ Connected to AI Commander Backend')
+      setConnected(true)
+      isConnecting = false
+    }
 
-      ws.onmessage = (event) => {
-        console.log('📩 Received from backend:', event.data)
-        try {
-          const data = JSON.parse(event.data)
-          
-          // Handle connection message
-          if (data.type === 'connection') {
-            console.log('🤝 Connection message:', data.message)
-            return
-          }
-          
-          // Handle strategy update
-          if (data.formation && data.target !== undefined && data.aggression !== undefined) {
-            setCurrentStrategy(data)
-            console.log('📊 Strategy updated:', data)
-          }
-        } catch (error) {
-          console.error('❌ Error parsing message:', error)
-        }
-      }
-
-      ws.onerror = (error) => {
-        console.error('❌ WebSocket error:', error)
-        setConnected(false)
-        isConnecting = false
-      }
-
-      ws.onclose = () => {
-        console.log('🔌 WebSocket connection closed')
-        setConnected(false)
-        isConnecting = false
+    ws.onmessage = (event) => {
+      console.log('📩 Received from backend:', event.data)
+      try {
+        const data = JSON.parse(event.data)
         
-        // Try to reconnect after 3 seconds
-        reconnectTimeout = setTimeout(() => {
-          console.log('🔄 Attempting to reconnect...')
-          connectWebSocket()
-        }, 3000)
+        if (data.type === 'connection') {
+          console.log('🤝 Connection message:', data.message)
+          return
+        }
+        
+        if (data.formation && data.target !== undefined && data.aggression !== undefined) {
+          setCurrentStrategy(data)
+          console.log('📊 Strategy updated:', data)
+        }
+      } catch (error) {
+        console.error('❌ Error parsing message:', error)
       }
     }
 
-    connectWebSocket()
+    ws.onerror = (error) => {
+      console.error('❌ WebSocket error:', error)
+      setConnected(false)
+      isConnecting = false
+    }
+
+    ws.onclose = () => {
+      console.log('🔌 WebSocket connection closed')
+      setConnected(false)
+      isConnecting = false
+      
+      reconnectTimeout = window.setTimeout(() => {
+        console.log('🔄 Attempting to reconnect...')
+        connectWebSocket()
+      }, 3000)
+    }
+  }
+
+  connectWebSocket()
 
     return () => {
       if (reconnectTimeout) {
