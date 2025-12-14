@@ -43,7 +43,7 @@ export default function App() {
   }
   
   useEffect(() => {
-  let reconnectTimeout: number | undefined  // ✅ Changed to allow undefined
+  let reconnectTimeout: number | undefined
   let isConnecting = false
   
   const connectWebSocket = () => {
@@ -53,16 +53,22 @@ export default function App() {
     }
     
     isConnecting = true
-    console.log('🔄 Attempting to connect to backend...')
     
-    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/commander'
-    console.log('🔗 Connecting to:', wsUrl)
+    // ✅ Use your actual Render backend URL
+    const wsUrl = import.meta.env.PROD 
+      ? 'wss://ai-commander-backend.onrender.com/ws/commander'  // Production (deployed)
+      : 'ws://localhost:8000/ws/commander'  // Development (local)
+    
+    console.log('🔄 Attempting to connect to backend...')
+    console.log('🔗 WebSocket URL:', wsUrl)
+    console.log('🌍 Environment:', import.meta.env.PROD ? 'Production' : 'Development')
     
     const ws = new WebSocket(wsUrl)
     wsRef.current = ws
 
     ws.onopen = () => {
       console.log('✅ Connected to AI Commander Backend')
+      console.log('🔗 Successfully connected to:', wsUrl)
       setConnected(true)
       isConnecting = false
     }
@@ -88,12 +94,15 @@ export default function App() {
 
     ws.onerror = (error) => {
       console.error('❌ WebSocket error:', error)
+      console.error('🔗 Failed to connect to:', wsUrl)
       setConnected(false)
       isConnecting = false
     }
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
       console.log('🔌 WebSocket connection closed')
+      console.log('📊 Close Code:', event.code)
+      console.log('📝 Close Reason:', event.reason || 'No reason')
       setConnected(false)
       isConnecting = false
       
@@ -106,16 +115,16 @@ export default function App() {
 
   connectWebSocket()
 
-    return () => {
-      if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout)
-      }
-      if (wsRef.current) {
-        wsRef.current.close()
-      }
-      isConnecting = false
+  return () => {
+    if (reconnectTimeout !== undefined) {
+      clearTimeout(reconnectTimeout)
     }
-  }, [])
+    if (wsRef.current) {
+      wsRef.current.close()
+    }
+    isConnecting = false
+  }
+}, [])
   
   const handleCommand = (command: string) => {
     console.log('🎮 Sending command:', command)
