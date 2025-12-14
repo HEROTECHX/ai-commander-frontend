@@ -56,7 +56,7 @@ export default function App() {
       console.log('🔄 Attempting to connect to backend...')
       
       // Use environment variable or fallback to localhost
-      const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/commander'
+      const wsUrl = 'wss://ai-commander-backend.onrender.com/ws/commander' || 'ws://localhost:8000/ws/commander'
       console.log('🔗 Connecting to:', wsUrl)
       
       const ws = new WebSocket(wsUrl)
