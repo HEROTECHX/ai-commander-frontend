@@ -43,7 +43,7 @@ export default function App() {
   }
   
   useEffect(() => {
-    let reconnectTimeout: NodeJS.Timeout
+    let reconnectTimeout: number;
     let isConnecting = false
     
     const connectWebSocket = () => {
